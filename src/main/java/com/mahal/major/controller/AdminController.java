@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 
 @Controller
@@ -20,6 +23,8 @@ public class AdminController {
 	CategoryService categoryService;
 	@Autowired
 	ProductService productService;
+
+	public static String uploadDIR = System.getProperty("user.dir") + "/src/main/resources/static/productImages";
 
 	@GetMapping("/admin")
 	public String adminHome() {
@@ -83,6 +88,41 @@ public class AdminController {
 		product.setPrice(productDTO.getPrice());
 		product.setDescription(productDTO.getDescription());
 		product.setWeight(productDTO.getWeight());
+		String imageUUID;
+		if(!file.isEmpty()){
+			imageUUID = file.getOriginalFilename();
+			Path fileNameAndPath = Paths.get(uploadDIR, imageUUID);
+			Files.write(fileNameAndPath, file.getBytes());
+		}else{
+			imageUUID = imgName;
+		}
+		product.setImageName(imageUUID);
+		productService.addProduct(product);
 		return "redirect:/admin/products";
+	}
+
+	@GetMapping("/admin/product/delete/{id}")
+	public String deleteProduct(@PathVariable long id){
+		productService.deleteProductById(id);
+		return "redirect:/admin/products";
+	}
+
+	@GetMapping("/admin/product/update/{id}")
+	public String updateProduct(@PathVariable long id, Model model){
+
+		Product product = productService.getProductsById(id).get();
+		ProductDTO productDTO = new ProductDTO();
+
+		productDTO.setId(product.getId());
+		productDTO.setName(product.getName());
+		productDTO.setCategoryId(product.getCategory().getId());
+		productDTO.setPrice(product.getPrice());
+		productDTO.setWeight(product.getWeight());
+		productDTO.setDescription(product.getDescription());
+		productDTO.setImageName(product.getImageName());
+
+		model.addAttribute("categories", categoryService.getAllCategories());
+		model.addAttribute("productDTO", productDTO);
+		return "productsAdd";
 	}
 }
